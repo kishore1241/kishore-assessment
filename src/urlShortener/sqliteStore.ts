@@ -1,6 +1,6 @@
 import { openSqliteClient } from "../db/sqliteClient.js";
 import { runMigrations } from "../db/migrate.js";
-import { ShortUrlRecord, ShortUrlStore } from "./types.js";
+import { AnalyticsSummary, ShortUrlRecord, ShortUrlStore, TopLinkAnalytics } from "./types.js";
 
 function randomCode(length = 7): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -105,6 +105,50 @@ export async function createSqliteShortUrlStore(dbPath: string): Promise<ShortUr
       }
 
       return first.values.map((row: unknown[]) => normalize(row));
+    },
+
+    async getAnalyticsSummary(sinceHours: number): Promise<AnalyticsSummary> {
+      const cutoff = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
+      const rows = client.db.exec(
+        "SELECT COUNT(*) as total_clicks, COUNT(DISTINCT code) as unique_links FROM short_url_clicks WHERE clicked_at >= ?;",
+        [cutoff]
+      );
+
+      const first = rows[0];
+      const row = first?.values[0];
+
+      return {
+        sinceHours,
+        totalClicks: Number(row?.[0] ?? 0),
+        uniqueLinks: Number(row?.[1] ?? 0),
+        generatedAt: new Date().toISOString()
+      };
+    },
+
+    async getTopLinks(limit: number, sinceHours: number): Promise<TopLinkAnalytics[]> {
+      const cutoff = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
+      const rows = client.db.exec(
+        `SELECT s.code, s.original_url, COUNT(c.id) as click_count, MAX(c.clicked_at) as last_clicked_at
+         FROM short_urls s
+         JOIN short_url_clicks c ON s.code = c.code
+         WHERE c.clicked_at >= ?
+         GROUP BY s.code, s.original_url
+         ORDER BY click_count DESC
+         LIMIT ?;`,
+        [cutoff, limit]
+      );
+
+      const first = rows[0];
+      if (!first) {
+        return [];
+      }
+
+      return first.values.map((row: unknown[]) => ({
+        code: String(row[0]),
+        originalUrl: String(row[1]),
+        clickCount: Number(row[2]),
+        lastClickedAt: row[3] ? String(row[3]) : null
+      }));
     }
   };
 }

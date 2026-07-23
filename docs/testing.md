@@ -6,7 +6,10 @@
   - Requirement analysis output shape and scenario classification.
   - Brownfield and ambiguous requirement classification.
   - Short URL creation endpoint.
+  - URL policy rejection for local/private targets.
+  - Rate limiting on create endpoint.
   - Redirect and click analytics increment.
+  - Analytics summary and top-links endpoints.
   - Submission-ready report generation endpoint.
 
 ## Manual
@@ -16,5 +19,5 @@
 
 ## Known Limitations
 - Storage is file-backed SQLite via sql.js and local to the runtime environment.
-- No authentication/rate limiting in this slice.
+- Rate limiting is implemented for short-link creation only; broader authN/authZ is not yet implemented.
 - Analytics are intentionally minimal (count + timestamp) and can be expanded for production reporting.

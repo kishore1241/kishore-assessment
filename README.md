@@ -30,11 +30,25 @@ This repository is a standalone, non-Verizon project for interview assessment wo
 
 ## API Endpoints
 - `POST /api/assessment/analyze`
+- `POST /api/assessment/report`
 - `POST /api/short-urls`
 - `GET /api/short-urls`
 - `GET /api/short-urls/:code`
 - `GET /s/:code`
-- `POST /api/assessment/report`
+- `GET /api/analytics/summary?sinceHours=24`
+- `GET /api/analytics/top-links?sinceHours=24&limit=10`
+
+## Security Controls
+- URL policy hardening for short-link creation:
+   - only `http` and `https` targets are allowed
+   - localhost, private network ranges, and `.local` hosts are blocked
+   - optional allowlist/blocklist via environment variables
+- Rate limiting on `POST /api/short-urls`
+
+Environment variables:
+- `ALLOWED_HOSTS` (comma-separated host allowlist, optional)
+- `BLOCKED_HOSTS` (comma-separated host blocklist, optional)
+- `SQLITE_DB_PATH` (optional, defaults to `data/app.db`)
 
 ## Scope Notes
 This implementation uses SQLite persistence through sql.js with migrations stored in `migrations/` and a local database file at `data/app.db`.

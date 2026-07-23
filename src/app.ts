@@ -2,6 +2,8 @@ import cors from "cors";
 import express from "express";
 import { z } from "zod";
 import { analyzeRequirement, generateEngineeringReport } from "./analysis/requirementAnalyzer.js";
+import { createRateLimiter } from "./middleware/rateLimit.js";
+import { createUrlPolicyFromEnv, validateTargetUrl } from "./security/urlPolicy.js";
 import { createMemoryShortUrlStore } from "./urlShortener/memoryStore.js";
 import { ShortUrlStore } from "./urlShortener/types.js";
 
@@ -22,9 +24,22 @@ const createSchema = z.object({
     .optional()
 });
 
-export function createApp(options?: { store?: ShortUrlStore }) {
+const analyticsQuerySchema = z.object({
+  sinceHours: z.coerce.number().int().positive().max(24 * 30).default(24),
+  limit: z.coerce.number().int().positive().max(50).default(10)
+});
+
+export function createApp(options?: {
+  store?: ShortUrlStore;
+  rateLimit?: {
+    windowMs: number;
+    maxRequests: number;
+  };
+}) {
   const app = express();
   const store = options?.store ?? createMemoryShortUrlStore();
+  const policy = createUrlPolicyFromEnv();
+  const limiter = createRateLimiter(options?.rateLimit?.windowMs ?? 60_000, options?.rateLimit?.maxRequests ?? 30);
 
   app.use(cors());
   app.use(express.json());
@@ -44,10 +59,18 @@ export function createApp(options?: { store?: ShortUrlStore }) {
     return res.status(200).json(analysis);
   });
 
-  app.post("/api/short-urls", async (req, res) => {
+  app.post("/api/short-urls", limiter, async (req, res) => {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(422).json({ error: "Invalid payload", details: parsed.error.flatten() });
+    }
+
+    const validation = validateTargetUrl(parsed.data.originalUrl, policy);
+    if (!validation.allowed) {
+      return res.status(422).json({
+        error: "URL rejected by policy",
+        reason: validation.reason
+      });
     }
 
     try {
@@ -96,6 +119,30 @@ export function createApp(options?: { store?: ShortUrlStore }) {
     return res.status(200).json({
       analysis,
       reportMarkdown
+    });
+  });
+
+  app.get("/api/analytics/summary", async (req, res) => {
+    const parsed = analyticsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(422).json({ error: "Invalid query", details: parsed.error.flatten() });
+    }
+
+    const summary = await store.getAnalyticsSummary(parsed.data.sinceHours);
+    return res.status(200).json(summary);
+  });
+
+  app.get("/api/analytics/top-links", async (req, res) => {
+    const parsed = analyticsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(422).json({ error: "Invalid query", details: parsed.error.flatten() });
+    }
+
+    const links = await store.getTopLinks(parsed.data.limit, parsed.data.sinceHours);
+    return res.status(200).json({
+      sinceHours: parsed.data.sinceHours,
+      limit: parsed.data.limit,
+      items: links
     });
   });
 

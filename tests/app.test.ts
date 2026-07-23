@@ -42,7 +42,7 @@ describe("assessment prototype API", () => {
   });
 
   it("creates and resolves a short URL", async () => {
-    const app = createApp({ store });
+    const app = createApp({ store, rateLimit: { windowMs: 60_000, maxRequests: 50 } });
 
     const create = await request(app).post("/api/short-urls").send({
       originalUrl: "https://example.com/engineering-docs",
@@ -63,8 +63,71 @@ describe("assessment prototype API", () => {
     expect(stats.body.clickCount).toBe(1);
   });
 
+  it("rejects localhost and private network URLs", async () => {
+    const app = createApp({ store, rateLimit: { windowMs: 60_000, maxRequests: 50 } });
+
+    const localhost = await request(app).post("/api/short-urls").send({
+      originalUrl: "http://127.0.0.1/internal"
+    });
+
+    expect(localhost.status).toBe(422);
+    expect(localhost.body.error).toBe("URL rejected by policy");
+
+    const privateRange = await request(app).post("/api/short-urls").send({
+      originalUrl: "http://10.0.0.5/service"
+    });
+
+    expect(privateRange.status).toBe(422);
+  });
+
+  it("enforces rate limits on short URL creation", async () => {
+    const app = createApp({ store, rateLimit: { windowMs: 60_000, maxRequests: 2 } });
+
+    const first = await request(app).post("/api/short-urls").send({
+      originalUrl: "https://example.com/a"
+    });
+    const second = await request(app).post("/api/short-urls").send({
+      originalUrl: "https://example.com/b"
+    });
+    const third = await request(app).post("/api/short-urls").send({
+      originalUrl: "https://example.com/c"
+    });
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(third.status).toBe(429);
+  });
+
+  it("returns analytics summary and top links", async () => {
+    const app = createApp({ store, rateLimit: { windowMs: 60_000, maxRequests: 50 } });
+
+    await request(app).post("/api/short-urls").send({
+      originalUrl: "https://example.com/popular",
+      customCode: "top1"
+    });
+    await request(app).post("/api/short-urls").send({
+      originalUrl: "https://example.com/secondary",
+      customCode: "top2"
+    });
+
+    await request(app).get("/s/top1");
+    await request(app).get("/s/top1");
+    await request(app).get("/s/top2");
+
+    const summary = await request(app).get("/api/analytics/summary?sinceHours=24");
+    expect(summary.status).toBe(200);
+    expect(summary.body.totalClicks).toBe(3);
+    expect(summary.body.uniqueLinks).toBe(2);
+
+    const top = await request(app).get("/api/analytics/top-links?sinceHours=24&limit=5");
+    expect(top.status).toBe(200);
+    expect(top.body.items.length).toBeGreaterThanOrEqual(2);
+    expect(top.body.items[0].code).toBe("top1");
+    expect(top.body.items[0].clickCount).toBe(2);
+  });
+
   it("generates a submission-ready engineering report", async () => {
-    const app = createApp({ store });
+    const app = createApp({ store, rateLimit: { windowMs: 60_000, maxRequests: 50 } });
 
     const response = await request(app).post("/api/assessment/report").send({
       requirement: "Build a scalable URL shortener service with APIs, persistence, and analytics."
