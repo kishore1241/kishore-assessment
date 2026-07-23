@@ -77,6 +77,7 @@
         <h2>Analyze Requirement</h2>
         <textarea id="requirement" rows="4">Build a scalable URL shortener service with APIs, persistence, and analytics.</textarea>
         <button id="analyzeBtn">Analyze</button>
+        <button id="reportBtn">Generate Engineering Report</button>
         <pre id="analysisOutput">No analysis yet.</pre>
       </section>
 
@@ -92,6 +93,7 @@
 
     <script>
       const analyzeBtn = document.getElementById("analyzeBtn");
+      const reportBtn = document.getElementById("reportBtn");
       const requirement = document.getElementById("requirement");
       const analysisOutput = document.getElementById("analysisOutput");
       const shortenBtn = document.getElementById("shortenBtn");
@@ -107,6 +109,17 @@
         });
         const payload = await response.json();
         analysisOutput.textContent = JSON.stringify(payload, null, 2);
+      });
+
+      reportBtn.addEventListener("click", async () => {
+        const response = await fetch("/api/assessment/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requirement: requirement.value })
+        });
+
+        const payload = await response.json();
+        analysisOutput.textContent = payload.reportMarkdown || JSON.stringify(payload, null, 2);
       });
 
       shortenBtn.addEventListener("click", async () => {

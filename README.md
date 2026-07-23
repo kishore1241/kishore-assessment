@@ -16,9 +16,11 @@ This repository is a standalone, non-Verizon project for interview assessment wo
 ## Run Locally
 1. Install dependencies:
    - `npm install`
-2. Start dev server:
+2. Run migrations:
+   - `npm run migrate`
+3. Start dev server:
    - `npm run dev`
-3. Open browser:
+4. Open browser:
    - `http://localhost:3000`
 
 ## Validate
@@ -32,6 +34,7 @@ This repository is a standalone, non-Verizon project for interview assessment wo
 - `GET /api/short-urls`
 - `GET /api/short-urls/:code`
 - `GET /s/:code`
+- `POST /api/assessment/report`
 
 ## Scope Notes
-This initial setup keeps persistence in memory to speed up delivery. A production follow-up can swap in a database-backed repository without changing API contracts.
+This implementation uses SQLite persistence through sql.js with migrations stored in `migrations/` and a local database file at `data/app.db`.

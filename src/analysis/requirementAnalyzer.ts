@@ -10,9 +10,12 @@ export interface EngineeringTask {
 export interface AnalysisResult {
   requirement: string;
   scenario: ScenarioType;
+  domain: "url_shortener" | "general_engineering";
   clarifiedProblem: string;
   openQuestions: string[];
   tasks: EngineeringTask[];
+  assumptions: string[];
+  tradeoffs: string[];
   risks: string[];
 }
 
@@ -21,14 +24,16 @@ export function analyzeRequirement(requirement: string): AnalysisResult {
   const lower = normalized.toLowerCase();
 
   let scenario: ScenarioType = "greenfield";
-  if (["existing", "refactor", "without changing", "bug fix"].some((k) => lower.includes(k))) {
+  if (["existing", "refactor", "without changing", "bug fix", "legacy", "enhance"].some((k) => lower.includes(k))) {
     scenario = "brownfield";
   }
-  if (["better", "improve", "somehow", "maybe"].some((k) => lower.includes(k))) {
+
+  if (["better", "improve", "somehow", "maybe", "faster", "good"].some((k) => lower.includes(k))) {
     scenario = "ambiguous";
   }
 
   const isUrlShortener = ["url shortener", "short link", "redirect", "analytics"].some((k) => lower.includes(k));
+  const domain = isUrlShortener ? "url_shortener" : "general_engineering";
 
   const tasks: EngineeringTask[] = [
     {
@@ -77,6 +82,19 @@ export function analyzeRequirement(requirement: string): AnalysisResult {
       ]
     : ["What are the acceptance criteria?", "Who are the consumers of this feature?"];
 
+  const assumptions = isUrlShortener
+    ? [
+        "Short code uniqueness is required.",
+        "Redirect should be deterministic and preserve target URL.",
+        "Analytics can begin with per-click tracking and aggregate count."
+      ]
+    : ["Requirement scope will be clarified before implementation."];
+
+  const tradeoffs = [
+    "Fast delivery versus full production hardening.",
+    "AI-assisted drafting speed versus manual validation rigor."
+  ];
+
   const clarifiedProblem = isUrlShortener
     ? "Build a URL shortener service with APIs, persistence, analytics, and safe redirects."
     : "Transform requirement into testable engineering outcomes with explicit assumptions.";
@@ -90,9 +108,55 @@ export function analyzeRequirement(requirement: string): AnalysisResult {
   return {
     requirement: normalized,
     scenario,
+    domain,
     clarifiedProblem,
     openQuestions,
     tasks,
+    assumptions,
+    tradeoffs,
     risks
   };
+}
+
+export function generateEngineeringReport(requirement: string, analysis: AnalysisResult): string {
+  const lines: string[] = [];
+
+  lines.push("# Engineering Summary");
+  lines.push("");
+  lines.push("## Requirement");
+  lines.push(requirement);
+  lines.push("");
+  lines.push("## Classification");
+  lines.push(`- Scenario: ${analysis.scenario}`);
+  lines.push(`- Domain: ${analysis.domain}`);
+  lines.push("");
+  lines.push("## Clarified Problem");
+  lines.push(analysis.clarifiedProblem);
+  lines.push("");
+  lines.push("## Task Decomposition");
+  for (const task of analysis.tasks) {
+    lines.push(`- Step ${task.step}: ${task.title}`);
+    lines.push(`  - AI Assist: ${task.aiAssist}`);
+    lines.push(`  - Validation: ${task.validation}`);
+  }
+  lines.push("");
+  lines.push("## Open Questions");
+  for (const item of analysis.openQuestions) {
+    lines.push(`- ${item}`);
+  }
+  lines.push("");
+  lines.push("## Assumptions");
+  for (const item of analysis.assumptions) {
+    lines.push(`- ${item}`);
+  }
+  lines.push("");
+  lines.push("## Risks and Trade-offs");
+  for (const item of analysis.risks) {
+    lines.push(`- Risk: ${item}`);
+  }
+  for (const item of analysis.tradeoffs) {
+    lines.push(`- Trade-off: ${item}`);
+  }
+
+  return lines.join("\n");
 }

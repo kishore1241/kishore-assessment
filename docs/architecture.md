@@ -5,7 +5,9 @@ Provide a standalone assessment project that demonstrates engineer-led AI-assist
 
 ## Components
 - Requirement Analysis Module: classifies requirement scenario and produces engineering task breakdown.
+- Engineering Report Module: generates submission-ready markdown summaries with tasks, risks, and trade-offs.
 - URL Shortener Module: creates short codes, resolves redirects, and tracks clicks.
+- SQLite Persistence Module: stores short URLs and click events using sql.js and migration files.
 - API Layer: exposes analysis and shortener endpoints.
 - Web Demo UI: quick way to run flows manually.
 - Test Suite: validates behavior and protects regressions.
@@ -13,4 +15,5 @@ Provide a standalone assessment project that demonstrates engineer-led AI-assist
 ## Design Decisions
 - Keep implementation intentionally lightweight for interview turnaround.
 - Ensure deterministic tests and no external AI service dependency for baseline reliability.
-- Keep APIs simple and easy to replace with persistent storage in a follow-up iteration.
+- Use SQL migrations under `migrations/` and file-backed storage at `data/app.db`.
+- Keep API contracts simple and modular so storage can later move to Postgres/MySQL with minimal surface changes.
