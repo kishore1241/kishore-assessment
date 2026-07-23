@@ -2,6 +2,8 @@ import cors from "cors";
 import express from "express";
 import { z } from "zod";
 import { analyzeRequirement, generateEngineeringReport } from "./analysis/requirementAnalyzer.js";
+import { generateReportPdfBuffer, renderReportHtml } from "./analysis/reportExport.js";
+import { createApiKeyAuth } from "./middleware/apiKeyAuth.js";
 import { createRateLimiter } from "./middleware/rateLimit.js";
 import { createUrlPolicyFromEnv, validateTargetUrl } from "./security/urlPolicy.js";
 import { createMemoryShortUrlStore } from "./urlShortener/memoryStore.js";
@@ -13,6 +15,11 @@ const analyzeSchema = z.object({
 
 const reportSchema = z.object({
   requirement: z.string().min(10).max(5000)
+});
+
+const exportSchema = z.object({
+  requirement: z.string().min(10).max(5000),
+  format: z.enum(["markdown", "html", "pdf"]).default("html")
 });
 
 const createSchema = z.object({
@@ -35,15 +42,18 @@ export function createApp(options?: {
     windowMs: number;
     maxRequests: number;
   };
+  reviewerApiKey?: string;
 }) {
   const app = express();
   const store = options?.store ?? createMemoryShortUrlStore();
   const policy = createUrlPolicyFromEnv();
   const limiter = createRateLimiter(options?.rateLimit?.windowMs ?? 60_000, options?.rateLimit?.maxRequests ?? 30);
+  const apiKeyAuth = createApiKeyAuth(options?.reviewerApiKey ?? process.env.REVIEWER_API_KEY);
 
   app.use(cors());
   app.use(express.json());
   app.use(express.static("public"));
+  app.use("/api", apiKeyAuth);
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
@@ -120,6 +130,34 @@ export function createApp(options?: {
       analysis,
       reportMarkdown
     });
+  });
+
+  app.post("/api/assessment/report/export", async (req, res) => {
+    const parsed = exportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(422).json({ error: "Invalid payload", details: parsed.error.flatten() });
+    }
+
+    const analysis = analyzeRequirement(parsed.data.requirement);
+    const markdown = generateEngineeringReport(parsed.data.requirement, analysis);
+
+    if (parsed.data.format === "markdown") {
+      res.setHeader("Content-Disposition", 'attachment; filename="engineering-summary.md"');
+      res.type("text/markdown");
+      return res.status(200).send(markdown);
+    }
+
+    if (parsed.data.format === "html") {
+      const html = renderReportHtml(parsed.data.requirement, analysis);
+      res.setHeader("Content-Disposition", 'attachment; filename="engineering-summary.html"');
+      res.type("text/html");
+      return res.status(200).send(html);
+    }
+
+    const pdfBuffer = await generateReportPdfBuffer(markdown);
+    res.setHeader("Content-Disposition", 'attachment; filename="engineering-summary.pdf"');
+    res.type("application/pdf");
+    return res.status(200).send(pdfBuffer);
   });
 
   app.get("/api/analytics/summary", async (req, res) => {

@@ -138,4 +138,50 @@ describe("assessment prototype API", () => {
     expect(response.body.reportMarkdown).toContain("## Task Decomposition");
     expect(response.body.reportMarkdown).toContain("Scenario: greenfield");
   });
+
+  it("exports report as html and pdf", async () => {
+    const app = createApp({ store, rateLimit: { windowMs: 60_000, maxRequests: 50 } });
+
+    const html = await request(app).post("/api/assessment/report/export").send({
+      requirement: "Build a scalable URL shortener service with APIs, persistence, and analytics.",
+      format: "html"
+    });
+
+    expect(html.status).toBe(200);
+    expect(String(html.headers["content-type"])).toContain("text/html");
+    expect(String(html.headers["content-disposition"])).toContain("engineering-summary.html");
+    expect(String(html.text)).toContain("Engineering Summary");
+
+    const pdf = await request(app).post("/api/assessment/report/export").send({
+      requirement: "Build a scalable URL shortener service with APIs, persistence, and analytics.",
+      format: "pdf"
+    });
+
+    expect(pdf.status).toBe(200);
+    expect(String(pdf.headers["content-type"])).toContain("application/pdf");
+    expect(String(pdf.headers["content-disposition"])).toContain("engineering-summary.pdf");
+  });
+
+  it("supports api key protected mode for reviewer endpoints", async () => {
+    const app = createApp({
+      store,
+      reviewerApiKey: "reviewer-secret",
+      rateLimit: { windowMs: 60_000, maxRequests: 50 }
+    });
+
+    const denied = await request(app).post("/api/assessment/analyze").send({
+      requirement: "Build a scalable URL shortener service with APIs, persistence, and analytics."
+    });
+
+    expect(denied.status).toBe(401);
+
+    const allowed = await request(app)
+      .post("/api/assessment/analyze")
+      .set("x-api-key", "reviewer-secret")
+      .send({
+        requirement: "Build a scalable URL shortener service with APIs, persistence, and analytics."
+      });
+
+    expect(allowed.status).toBe(200);
+  });
 });

@@ -44,7 +44,9 @@ Coverage:
   - URL creation, redirect, click tracking
   - scenario classification (greenfield/brownfield/ambiguous)
   - report generation
+  - report export (html/pdf)
   - policy enforcement and rate limiting
+  - optional API key protection mode
 
 ## 6) Risk Awareness
 Coverage:
@@ -58,6 +60,8 @@ Coverage:
 Coverage:
 - Submission-ready markdown report endpoint:
   - POST /api/assessment/report
+- Exportable report endpoint:
+  - POST /api/assessment/report/export (markdown/html/pdf)
 - Documentation:
   - README.md
   - docs/architecture.md

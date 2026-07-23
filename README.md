@@ -31,6 +31,7 @@ This repository is a standalone, non-Verizon project for interview assessment wo
 ## API Endpoints
 - `POST /api/assessment/analyze`
 - `POST /api/assessment/report`
+- `POST /api/assessment/report/export`
 - `POST /api/short-urls`
 - `GET /api/short-urls`
 - `GET /api/short-urls/:code`
@@ -49,6 +50,12 @@ Environment variables:
 - `ALLOWED_HOSTS` (comma-separated host allowlist, optional)
 - `BLOCKED_HOSTS` (comma-separated host blocklist, optional)
 - `SQLITE_DB_PATH` (optional, defaults to `data/app.db`)
+- `REVIEWER_API_KEY` (optional, enables API key protection for all /api routes)
+
+Report export formats via `POST /api/assessment/report/export`:
+- `markdown`
+- `html`
+- `pdf`
 
 ## Scope Notes
 This implementation uses SQLite persistence through sql.js with migrations stored in `migrations/` and a local database file at `data/app.db`.
