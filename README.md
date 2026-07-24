@@ -7,6 +7,15 @@ This repository is a standalone, non-Verizon project for interview assessment wo
 - Mandatory URL shortener use case with APIs, redirect, and click analytics.
 - Runnable service, minimal web UI, tests, and documentation.
 
+## Key Documentation
+- Architecture: docs/architecture.md
+- Testing approach: docs/testing.md
+- Assignment requirement mapping: docs/submission-mapping.md
+- AI usage evidence: docs/ai-usage-evidence.md
+- Example scenarios: docs/example-scenarios.md
+- API contracts: docs/api-contracts.md
+- Interview walkthrough: docs/interview-walkthrough.md
+
 ## Tech Stack
 - Node.js + TypeScript
 - Express

@@ -20,6 +20,8 @@ Coverage:
   - src/analysis/requirementAnalyzer.ts
 - Engineer ownership visible in generated report structure:
   - src/analysis/requirementAnalyzer.ts
+- Explicit AI usage narrative and accepted/rejected patterns:
+  - docs/ai-usage-evidence.md
 
 ## 4) Engineering Output Generation
 Coverage:
@@ -33,6 +35,8 @@ Coverage:
   - public/index.html
 - Tests validating behavior:
   - tests/app.test.ts
+- Lightweight API contract documentation:
+  - docs/api-contracts.md
 
 ## 5) Validation and Quality Assurance
 Coverage:
@@ -67,6 +71,10 @@ Coverage:
   - docs/architecture.md
   - docs/testing.md
   - docs/submission-mapping.md
+  - docs/example-scenarios.md
+  - docs/api-contracts.md
+  - docs/ai-usage-evidence.md
+  - docs/interview-walkthrough.md
 
 ## Mandatory Use Case: URL Shortener
 Coverage:
